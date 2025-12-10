@@ -79,6 +79,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
     const [activeRegionId, setActiveRegionId] = useState<string | null>(null);
     const [extractedText, setExtractedText] = useState<Map<string, TextItem>>(new Map());
     const [isExtracting, setIsExtracting] = useState(false);
+    const [isAddingTextBox, setIsAddingTextBox] = useState(false);
 
     const onDocumentLoadSuccess = async ({ numPages }: { numPages: number }) => {
         setNumPages(numPages);
@@ -97,7 +98,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
                 } else {
                     // Read from file if bytes not stored yet
                     console.log('📥 Reading PDF file for rendering...');
-                    const arrayBuffer = await file.arrayBuffer();
+                const arrayBuffer = await file.arrayBuffer();
                     uint8Array = new Uint8Array(arrayBuffer);
                     
                     // Store a copy for future use
@@ -145,7 +146,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
                 try {
                     await fontLoader.loadGoogleFont(fontFamily, commonWeights);
                     console.log(`✅ Loaded Google Font: ${fontFamily}`);
-                } catch (error) {
+                    } catch (error) {
                     console.warn(`⚠️ Failed to load Google Font ${fontFamily}:`, error);
                 }
             }
@@ -640,8 +641,50 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
                         />
                     </Document>
 
+                    {/* Click handler for adding new text boxes */}
+                    {isAddingTextBox && (
+                        <div
+                            style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '100%',
+                                cursor: 'crosshair',
+                                zIndex: 1000,
+                            }}
+                            onClick={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const x = (e.clientX - rect.left) / scale;
+                                const y = (e.clientY - rect.top) / scale;
+                                
+                                // Create new text box
+                                const newId = `new-text-${Date.now()}`;
+                                const newTextItem: TextItem = {
+                                    id: newId,
+                                    text: 'New Text',
+                                    x: x,
+                                    y: y,
+                                    width: 200,
+                                    height: 20,
+                                    fontSize: 12,
+                                    fontName: 'Arial, sans-serif',
+                                    fontWeight: 400,
+                                    fontStyle: 'normal',
+                                    color: '#000000',
+                                    pageNumber: currentPage,
+                                    transform: [1, 0, 0, 1, 0, 0],
+                                };
+                                
+                                setExtractedText(prev => new Map(prev).set(newId, newTextItem));
+                                setActiveRegionId(newId);
+                                setIsAddingTextBox(false);
+                            }}
+                        />
+                    )}
+
                     {/* Hover boxes overlay */}
-                    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: isAddingTextBox ? 'none' : 'none' }}>
                         {textRegions.map(region => (
                             // Hide the active box when editing
                             region.id === activeRegionId ? null : (

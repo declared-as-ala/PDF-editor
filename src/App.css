@@ -655,14 +655,14 @@ body {
 /* Word Toolbar Styles - Microsoft Word style */
 .word-toolbar-container {
   position: fixed;
-  top: 0;
+  top: 60px; /* Below the PDF header */
   left: 0;
   right: 0;
   z-index: 1500;
-  background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
-  border-bottom: 2px solid #dee2e6;
+  background: rgba(51, 65, 85, 0.95); /* Match PDF viewer background */
+  border-bottom: 1px solid var(--border-color);
   padding: 0.5rem 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(10px);
 }
 
@@ -676,7 +676,7 @@ body {
 }
 
 .word-toolbar-placeholder {
-  color: #6c757d;
+  color: var(--text-secondary);
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   text-align: center;
@@ -700,9 +700,10 @@ body {
 
 .word-toolbar-select {
   padding: 0.35rem 0.6rem;
-  border: 1px solid #ced4da;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
-  background: white;
+  background: rgba(40, 40, 45, 0.9);
+  color: var(--text-primary);
   font-size: 0.875rem;
   cursor: pointer;
   min-height: 32px;
@@ -711,13 +712,13 @@ body {
 }
 
 .word-toolbar-select:hover {
-  border-color: #adb5bd;
-  background: #f8f9fa;
+  border-color: var(--primary-color);
+  background: rgba(50, 50, 55, 0.95);
 }
 
 .word-toolbar-select:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: var(--primary-color);
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
 }
 
@@ -736,7 +737,7 @@ body {
   border: 1px solid transparent;
   border-radius: 4px;
   background: transparent;
-  color: #212529;
+  color: var(--text-primary);
   font-size: 0.95rem;
   cursor: pointer;
   min-width: 32px;
@@ -749,19 +750,19 @@ body {
 }
 
 .word-toolbar-btn:hover {
-  background: #e9ecef;
-  border-color: #ced4da;
+  background: rgba(99, 102, 241, 0.2);
+  border-color: var(--primary-color);
 }
 
 .word-toolbar-btn.active {
-  background: #6366f1;
+  background: var(--primary-color);
   color: white;
-  border-color: #6366f1;
+  border-color: var(--primary-color);
   box-shadow: 0 1px 3px rgba(99, 102, 241, 0.3);
 }
 
 .word-toolbar-btn.active:hover {
-  background: #4f46e5;
+  background: var(--primary-dark);
 }
 
 .word-toolbar-color-wrapper {
@@ -778,7 +779,7 @@ body {
 .color-icon {
   font-weight: bold;
   font-size: 1.1rem;
-  color: #212529;
+  color: var(--text-primary);
 }
 
 .color-indicator {
@@ -793,11 +794,11 @@ body {
   top: 100%;
   left: 0;
   margin-top: 0.5rem;
-  background: white;
-  border: 1px solid #dee2e6;
+  background: rgba(30, 41, 59, 0.98);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 0.75rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   z-index: 10000;
   min-width: 220px;
 }
@@ -842,11 +843,11 @@ body {
   top: 100%;
   left: 0;
   margin-top: 0.5rem;
-  background: white;
-  border: 1px solid #dee2e6;
+  background: rgba(30, 41, 59, 0.98);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 0.5rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   z-index: 10000;
   display: flex;
   flex-direction: column;
@@ -865,14 +866,15 @@ body {
   justify-content: center;
   font-size: 1.1rem;
   transition: all 0.2s;
+  color: var(--text-primary);
 }
 
 .word-toolbar-alignment-menu button:hover {
-  background: #e9ecef;
+  background: rgba(99, 102, 241, 0.2);
 }
 
 .word-toolbar-alignment-menu button.active {
-  background: #6366f1;
+  background: var(--primary-color);
   color: white;
 }
 
