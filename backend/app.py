@@ -132,16 +132,74 @@ def edit_pdf():
                 color = (0, 0, 0)
             
             # Parse font family and weight from fontName
-            # e.g., "Rubik-Bold, Georgia, serif" -> family="Rubik", weight=700
+            # fontName can be:
+            # 1. Original PDF font name: "MUFUZY+Rubik-Medium" (preferred)
+            # 2. Clean name: "Rubik-Medium"
+            # 3. CSS font-family: "Rubik-Medium, Georgia, serif"
             font_name = edit.get('fontName', '')
             font_weight = edit.get('fontWeight', 400)
             
             print(f"  Raw fontName: '{font_name}', fontWeight: {font_weight}")
             
-            # Extract family from font name (first part before comma)
-            family = font_name.split(',')[0].split('-')[0].strip()
+            # Parse font name more robustly
+            # Remove subset prefix if present (e.g., "MUFUZY+Rubik-Medium" -> "Rubik-Medium")
+            clean_name = font_name
+            if '+' in clean_name:
+                # Extract part after the '+' (subset prefix)
+                clean_name = clean_name.split('+', 1)[-1]
             
-            print(f"  Parsed family: '{family}'")
+            # Remove CSS fallbacks (everything after comma)
+            if ',' in clean_name:
+                clean_name = clean_name.split(',')[0].strip()
+            
+            # Extract family name (remove weight/style suffixes)
+            # e.g., "Rubik-Medium" -> "Rubik", "CenturySchoolbook-Bold" -> "CenturySchoolbook"
+            family = clean_name.strip()
+            
+            # Remove common weight/style suffixes
+            weight_keywords = ['-Bold', '-Medium', '-Light', '-Regular', '-Thin', '-Black', '-Heavy', 
+                            '-SemiBold', '-Demibold', '-ExtraLight', '-UltraLight', '-ExtraBold', '-UltraBold']
+            style_keywords = ['-Italic', '-Oblique']
+            
+            for keyword in weight_keywords + style_keywords:
+                if family.lower().endswith(keyword.lower()):
+                    family = family[:-len(keyword)]
+                    break
+            
+            # Also try splitting by hyphen and taking first part
+            if '-' in family:
+                parts = family.split('-')
+                # Check if last part is a weight/style keyword
+                last_part = parts[-1].lower()
+                if last_part in ['bold', 'medium', 'light', 'regular', 'thin', 'black', 'heavy', 
+                               'semibold', 'demibold', 'extralight', 'ultralight', 'extrabold', 'ultrabold',
+                               'italic', 'oblique']:
+                    family = '-'.join(parts[:-1])
+                else:
+                    # If not a keyword, use first part as family
+                    family = parts[0]
+            
+            family = family.strip()
+            
+            # If family is empty or generic, try to infer from font_name
+            if not family or family.lower() in ['serif', 'sans-serif', 'monospace']:
+                # Try to extract from original font_name before cleaning
+                if '+' in font_name:
+                    temp = font_name.split('+', 1)[-1].split(',')[0].strip()
+                    if '-' in temp:
+                        family = temp.split('-')[0].strip()
+                    else:
+                        family = temp
+                elif '-' in font_name:
+                    family = font_name.split('-')[0].split(',')[0].strip()
+                else:
+                    family = font_name.split(',')[0].strip()
+            
+            # Final fallback
+            if not family or family == '':
+                family = 'Helvetica'
+            
+            print(f"  Parsed family: '{family}' (from '{font_name}')")
             
             # Cover original text with white rectangle
             rect = fitz.Rect(x, y, x + width, y + height)
@@ -151,25 +209,50 @@ def edit_pdf():
             # PyMuPDF uses bottom-left positioning, adjust Y coordinate
             text_y = y + height - (font_size * 0.2)  # Adjust for baseline
             
-            # Try to download and use Google Font
+            # Try to use the font
+            # Strategy:
+            # 1. Try Google Fonts for custom fonts
+            # 2. Use Base14 fonts for standard fonts
+            # 3. Fallback to Helvetica if all else fails
             try:
-                if family and family not in ['Georgia', 'serif', 'sans-serif', 'Arial', 'Helvetica']:
-                    print(f"  Downloading Google Font: {family} {font_weight}")
-                    font_path = font_downloader.download_font(family, font_weight)
+                # List of standard fonts that should use Base14
+                standard_fonts = ['Georgia', 'serif', 'sans-serif', 'Arial', 'Helvetica', 
+                                'Times', 'TimesNewRoman', 'Courier', 'CourierNew']
+                
+                family_lower = family.lower()
+                is_standard = any(std in family_lower for std in standard_fonts)
+                
+                if not is_standard and family:
+                    # Try to download Google Font
+                    try:
+                        print(f"  Downloading Google Font: {family} {font_weight}")
+                        font_path = font_downloader.download_font(family, font_weight)
+                        
+                        # Insert text with downloaded Google Font
+                        page.insert_text(
+                            (x, text_y),
+                            new_text,
+                            fontsize=font_size,
+                            fontfile=str(font_path),
+                            color=color,
+                            render_mode=0
+                        )
+                        print(f"  ✅ Used Google Font: {family} {font_weight}")
+                    except Exception as google_error:
+                        print(f"  ⚠️ Google Font download failed for '{family}': {google_error}")
+                        # Fall through to Base14 fallback
+                        is_standard = True
+                
+                if is_standard or not family:
+                    # Use Base14 font for standard/generic fonts
+                    if 'times' in family_lower or 'serif' in family_lower:
+                        fontname = "Times-Bold" if font_weight >= 700 else "Times-Roman"
+                    elif 'courier' in family_lower or 'mono' in family_lower:
+                        fontname = "Courier-Bold" if font_weight >= 700 else "Courier"
+                    else:
+                        # Default to Helvetica (sans-serif)
+                        fontname = "Helvetica-Bold" if font_weight >= 700 else "Helvetica"
                     
-                    # Insert text with downloaded Google Font
-                    page.insert_text(
-                        (x, text_y),
-                        new_text,
-                        fontsize=font_size,
-                        fontfile=str(font_path),
-                        color=color,
-                        render_mode=0
-                    )
-                    print(f"  ✅ Used Google Font: {family} {font_weight}")
-                else:
-                    # Use Base14 font for generic fonts
-                    fontname = "Helvetica-Bold" if font_weight >= 700 else "Helvetica"
                     page.insert_text(
                         (x, text_y),
                         new_text,
@@ -181,8 +264,8 @@ def edit_pdf():
                     print(f"  ✅ Used Base14 font: {fontname}")
                     
             except Exception as e:
-                # Fallback to Helvetica if Google Font download fails
-                print(f"  ⚠️ Font download failed, using Helvetica: {e}")
+                # Final fallback to Helvetica if everything fails
+                print(f"  ⚠️ Font handling failed, using Helvetica fallback: {e}")
                 fontname = "Helvetica-Bold" if font_weight >= 700 else "Helvetica"
                 page.insert_text(
                     (x, text_y),

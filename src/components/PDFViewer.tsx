@@ -7,19 +7,9 @@ import { EditorToolbar } from './EditorToolbar';
 import { TextExtractor } from '../lib/TextExtractor';
 import { BackendFontService } from '../lib/BackendFontService';
 import { fontManager } from '../lib/FontManager';
-import { fontFallbackService } from '../lib/FontFallbackService';
+import { parseFontName, getCssFontFamily, getBackendFontName } from '../lib/FontParser';
+import { FontSelector } from './FontSelector';
 import type { TextItem } from '../types/types';
-
-// Helper function to parse font metadata
-const parseFontNameHelper = (name: string): { family: string; style: 'normal' | 'italic'; weight: number } => {
-    const nameLower = name.toLowerCase();
-    const style: 'normal' | 'italic' = nameLower.includes('italic') || nameLower.includes('oblique') ? 'italic' : 'normal';
-    let weight = 400;
-    if (nameLower.includes('bold')) weight = 700;
-    else if (nameLower.includes('light')) weight = 300;
-    const family = name.replace(/-(Bold|Italic|Regular|Light)/gi, '').replace(/^[A-Z]{6}\+/, '').trim();
-    return { family, style, weight };
-};
 
 interface PDFViewerProps {
     file: File | null;
@@ -90,44 +80,69 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
     // Download full fonts from Google Fonts for browser display AND PDF export
     useEffect(() => {
         const loadFonts = async () => {
-            if (extractedFonts.size === 0) return;
-
-            console.log('🌐 Downloading full fonts from Google Fonts for editing and PDF export...');
+            console.log('🌐 Loading fonts for PDF display and editing...');
 
             const { fontLoader } = await import('../lib/FontLoader');
 
-            // Get unique font families and collect all weights
-            const fontFamilies = new Map<string, Set<number>>();
+            // Google Fonts to preload (from FontSelector)
+            const googleFontsToLoad = [
+                'Roboto', 'Open Sans', 'Lato', 'Montserrat', 'Poppins', 
+                'Rubik', 'Inter', 'Playfair Display', 'Merriweather', 'Source Sans Pro'
+            ];
 
-            for (const [name] of extractedFonts.entries()) {
-                const { family, weights } = fontLoader.parseFontInfo(name);
-                if (!fontFamilies.has(family)) {
-                    fontFamilies.set(family, new Set());
+            // Load Google Fonts with common weights
+            const commonWeights = [300, 400, 500, 600, 700];
+            for (const fontFamily of googleFontsToLoad) {
+                try {
+                    await fontLoader.loadGoogleFont(fontFamily, commonWeights);
+                    console.log(`✅ Loaded Google Font: ${fontFamily}`);
+                } catch (error) {
+                    console.warn(`⚠️ Failed to load Google Font ${fontFamily}:`, error);
                 }
-                weights.forEach(w => fontFamilies.get(family)!.add(w));
             }
 
-            // Load each family once with all its weights for browser display
-            for (const [family, weightsSet] of fontFamilies.entries()) {
-                const weights = Array.from(weightsSet).sort((a, b) => a - b);
-                await fontLoader.loadGoogleFont(family, weights);
+            // Also load fonts from extracted PDF fonts
+            if (extractedFonts.size > 0) {
+                console.log('🌐 Loading fonts from PDF...');
+                
+                // Get unique font families and collect all weights
+                const fontFamilies = new Map<string, Set<number>>();
 
-                // Download full font files from Google Fonts for PDF export
-                for (const weight of weights) {
+                for (const [name] of extractedFonts.entries()) {
+                    const { family, weights } = fontLoader.parseFontInfo(name);
+                    if (!fontFamilies.has(family)) {
+                        fontFamilies.set(family, new Set());
+                    }
+                    weights.forEach(w => fontFamilies.get(family)!.add(w));
+                }
+
+                // Load each family once with all its weights for browser display
+                for (const [family, weightsSet] of fontFamilies.entries()) {
+                    const weights = Array.from(weightsSet).sort((a, b) => a - b);
                     try {
-                        const fontBytes = await fontLoader.downloadGoogleFontFile(family, weight);
-                        if (fontBytes) {
-                            const fontName = `${family}-${weight}`;
-                            await fontManager.registerFont(fontName, fontBytes, 'google');
-                            console.log(`✅ Registered Google Font "${fontName}" for PDF export`);
+                        await fontLoader.loadGoogleFont(family, weights);
+                        console.log(`✅ Loaded PDF font: ${family}`);
+
+                        // Download full font files from Google Fonts for PDF export
+                        for (const weight of weights) {
+                            try {
+                                const fontBytes = await fontLoader.downloadGoogleFontFile(family, weight);
+                                if (fontBytes) {
+                                    const fontName = `${family}-${weight}`;
+                                    await fontManager.registerFont(fontName, fontBytes, 'google');
+                                    console.log(`✅ Registered Google Font "${fontName}" for PDF export`);
+                                }
+                            } catch (error) {
+                                console.warn(`⚠️ Failed to download/register ${family} ${weight}:`, error);
+                            }
                         }
                     } catch (error) {
-                        console.warn(`⚠️ Failed to download/register ${family} ${weight}:`, error);
+                        console.warn(`⚠️ Failed to load PDF font ${family}:`, error);
                     }
                 }
             }
 
-            console.log(`✅ Fonts loaded for editing and PDF export`);
+            console.log(`✅ All fonts loaded for editing and PDF export`);
         };
 
         loadFonts();
@@ -189,7 +204,6 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
                     // Check if this item is within the region bounds
                     const itemRight = x + width;
                     const regionRight = region.x + region.width;
-                    const regionBottom = region.y + region.height;
 
                     const xOverlap = !(x > regionRight || itemRight < region.x);
 
@@ -254,7 +268,8 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
 
                     console.log('Template item found:', templateItem?.fontName, templateItem?.originalFontName, templateItem?.color);
 
-                    const regionTextItem = {
+                    // Ensure we preserve the exact font information
+                    const regionTextItem: TextItem = {
                         id: `region-text-${regionId}`,
                         text: mergedText,
                         x: firstItem.x,  // Use first item's actual X, not region X
@@ -262,8 +277,10 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
                         width: region.width,  // Use region width
                         height: region.height,  // Use region height
                         fontSize: firstItem.fontSize,
-                        fontName: templateItem?.fontName || 'Arial, sans-serif',
-                        originalFontName: templateItem?.originalFontName,  // For PDF export
+                        // Preserve exact fontName (CSS font-family) for display
+                        fontName: templateItem?.fontName || firstItem.item.fontName || 'Arial, sans-serif',
+                        // Preserve originalFontName for backend/PDF export
+                        originalFontName: templateItem?.originalFontName || firstItem.item.fontName,
                         fontWeight: templateItem?.fontWeight || 400,
                         fontStyle: templateItem?.fontStyle || 'normal',
                         color: templateItem?.color || '#000',
@@ -271,9 +288,9 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
                         transform: firstItem.item.transform,
                     };
 
-                    console.log(`Extracted text for region ${regionId}:`, regionTextItem.text);
-                    console.log(`Font: ${regionTextItem.fontName} (original: ${regionTextItem.originalFontName}), Color: ${regionTextItem.color}`);
-                    console.log(`Text with markers: [${regionTextItem.text}]`); // Check for leading spaces
+                    console.log(`✅ Extracted text for region ${regionId}:`, regionTextItem.text);
+                    console.log(`📝 Font preserved - fontName: "${regionTextItem.fontName}", originalFontName: "${regionTextItem.originalFontName}"`);
+                    console.log(`🎨 Font weight: ${regionTextItem.fontWeight}, style: ${regionTextItem.fontStyle}, color: ${regionTextItem.color}`);
                     setExtractedText(prev => new Map(prev).set(regionId, regionTextItem));
                     setActiveRegionId(regionId);
                 } else {
@@ -295,9 +312,35 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
 
     if (!file) return null;
 
-    const activeText = activeRegionId ? extractedText.get(activeRegionId) : null;
+    const activeText: TextItem | null = activeRegionId ? (extractedText.get(activeRegionId) ?? null) : null;
     console.log('🎯 Active region ID:', activeRegionId);
     console.log('📝 Active text:', activeText);
+
+    const handleFontChange = (fontName: string, fontWeight: number, fontStyle: string) => {
+        if (!activeRegionId) return;
+        
+        const textItem = extractedText.get(activeRegionId);
+        if (textItem) {
+            // Parse the font name to get the family for backend
+            const parsed = parseFontName(fontName);
+            
+            const updated: TextItem = {
+                ...textItem,
+                fontName: fontName, // CSS font-family for display
+                originalFontName: parsed.cleanName || fontName.split(',')[0].trim(), // For backend
+                fontWeight: fontWeight,
+                fontStyle: fontStyle as 'normal' | 'italic',
+            };
+            
+            console.log('🎨 Font changed:', {
+                fontName: updated.fontName,
+                fontWeight: updated.fontWeight,
+                fontStyle: updated.fontStyle,
+            });
+            
+            setExtractedText(prev => new Map(prev).set(activeRegionId!, updated));
+        }
+    };
 
     const handleExportPDF = async () => {
         if (!file || extractedText.size === 0) {
@@ -309,19 +352,25 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
             console.log('📦 Sending edits to backend for PDF modification...');
 
             // Prepare edit instructions
-            const edits = Array.from(extractedText.values()).map(textItem => ({
-                pageNumber: textItem.pageNumber,
-                originalText: '', // Not needed for backend
-                newText: textItem.text,
-                x: textItem.x,
-                y: textItem.y,
-                width: textItem.width,
-                height: textItem.height,
-                fontSize: textItem.fontSize,
-                fontName: textItem.fontName,
-                fontWeight: textItem.fontWeight,
-                color: textItem.color
-            }));
+            const edits = Array.from(extractedText.values()).map(textItem => {
+                // Parse font to get proper backend font name
+                const parsed = parseFontName(textItem.fontName || 'Georgia', textItem.originalFontName);
+                const backendFontName = getBackendFontName(parsed);
+                
+                return {
+                    pageNumber: textItem.pageNumber,
+                    originalText: '', // Not needed for backend
+                    newText: textItem.text,
+                    x: textItem.x,
+                    y: textItem.y,
+                    width: textItem.width,
+                    height: textItem.height,
+                    fontSize: textItem.fontSize,
+                    fontName: backendFontName, // Use originalFontName if available, otherwise cleanName
+                    fontWeight: parsed.weight || textItem.fontWeight || 400,
+                    color: textItem.color
+                };
+            });
 
             console.log(`📝 Sending ${edits.length} edits to backend`);
 
@@ -383,6 +432,14 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
                 onReset={() => setExtractedText(new Map())}
                 onExport={handleExportPDF}
             />
+
+            {/* Font Selector - shows when text is selected */}
+            <div className="font-selector-container">
+                <FontSelector
+                    textItem={activeText}
+                    onFontChange={handleFontChange}
+                />
+            </div>
 
             <div className="pdf-controls">
                 <div className="control-group">
@@ -483,10 +540,26 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
                                     currentText={activeText.text}
                                     isEditMode={true}
                                     scale={scale}
-                                    onTextChange={(itemId, newText) => {
+                                    onTextChange={(_itemId, newText) => {
                                         const textItem = extractedText.get(activeRegionId!);
                                         if (textItem) {
-                                            const updated = { ...textItem, text: newText };
+                                            // Preserve ALL font properties when updating text
+                                            const updated: TextItem = { 
+                                                ...textItem, 
+                                                text: newText,
+                                                // Explicitly preserve font properties to prevent loss
+                                                fontName: textItem.fontName,
+                                                originalFontName: textItem.originalFontName,
+                                                fontWeight: textItem.fontWeight,
+                                                fontStyle: textItem.fontStyle,
+                                                fontSize: textItem.fontSize,
+                                                color: textItem.color,
+                                            };
+                                            console.log('📝 Updating text, preserving font:', {
+                                                fontName: updated.fontName,
+                                                originalFontName: updated.originalFontName,
+                                                fontWeight: updated.fontWeight,
+                                            });
                                             setExtractedText(prev => new Map(prev).set(activeRegionId!, updated));
                                         }
                                     }}
@@ -499,28 +572,15 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
                     {textRegions.map(region => {
                         const editedText = extractedText.get(region.id);
                         if (editedText && region.id !== activeRegionId) {
-                            // Parse font name to extract clean family and weight
-                            const parseFontName = (fontName: string): { family: string; weight: number } => {
-                                let cleanName = fontName.replace(/^[A-Z]{6}\+/, '');
-                                let weight = 400;
-                                if (cleanName.includes('Bold')) {
-                                    weight = 700;
-                                    cleanName = cleanName.replace(/[-\s]?Bold/i, '');
-                                } else if (cleanName.includes('Medium')) {
-                                    weight = 500;
-                                    cleanName = cleanName.replace(/[-\s]?Medium/i, '');
-                                } else if (cleanName.includes('Light')) {
-                                    weight = 300;
-                                    cleanName = cleanName.replace(/[-\s]?Light/i, '');
-                                } else if (cleanName.includes('Regular')) {
-                                    cleanName = cleanName.replace(/[-\s]?Regular/i, '');
-                                }
-                                // Handle fallback CSS strings like "Arial, sans-serif"
-                                cleanName = cleanName.split(',')[0].trim();
-                                return { family: cleanName, weight };
+                            // Parse font to get family name (without weight suffix) and weight/style
+                            // Google Fonts loads fonts by family name only, weight is applied via fontWeight CSS
+                            const parsed = parseFontName(editedText.fontName || 'Georgia', editedText.originalFontName);
+                            const cssFontFamily = getCssFontFamily(parsed);
+                            const fontInfo = {
+                                family: cssFontFamily, // Family name only (matches Google Fonts)
+                                weight: editedText.fontWeight || parsed.weight, // Weight applied via fontWeight CSS
+                                style: editedText.fontStyle || parsed.style, // Style applied via fontStyle CSS
                             };
-
-                            const fontInfo = parseFontName(editedText.fontName || 'Georgia');
 
                             return (
                                 <div
@@ -531,8 +591,9 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
                                         left: `${editedText.x * scale}px`,
                                         top: `${editedText.y * scale}px`,
                                         fontSize: `${editedText.fontSize * scale}px`,
-                                        fontFamily: fontInfo.family,
+                                        fontFamily: fontInfo.family, // Exact fontName preserved
                                         fontWeight: fontInfo.weight,
+                                        fontStyle: fontInfo.style, // Preserve font style
                                         color: editedText.color || '#000',
                                         cursor: 'pointer',
                                         padding: '2px',

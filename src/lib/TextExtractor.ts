@@ -36,20 +36,65 @@ export class TextExtractor {
                                 const fontObj = page.commonObjs.get(fontId);
                                 if (fontObj && fontObj.name) {
                                     const originalName = fontObj.name;  // e.g., "MUFUZY+Rubik-Medium"
-                                    const cleanedName = originalName.split('+').pop()?.split(',')[0].trim();
+                                    // Extract clean name: remove subset prefix and get font name
+                                    let cleanedName = originalName;
+                                    if (originalName.includes('+')) {
+                                        cleanedName = originalName.split('+').pop() || originalName;
+                                    }
+                                    // Remove any additional suffixes or metadata
+                                    cleanedName = cleanedName.split(',')[0].trim();
+                                    
                                     if (cleanedName) {
                                         fontMap.set(fontId, { cleanName: cleanedName, originalName });
                                         console.log(`🔍 Font: ${fontId} → ${cleanedName} (original: ${originalName})`);
                                     }
                                 }
                             } catch (e) {
-                                // Font not available
+                                // Font not available - continue
                             }
                         }
                     }
                 }
             } catch (e) {
-                console.warn('Could not extract fonts:', e);
+                console.warn('Could not extract fonts from operatorList:', e);
+            }
+            
+            // Fallback: Try to extract from textContent items directly
+            // This helps when operatorList extraction fails
+            if (fontMap.size === 0) {
+                try {
+                    for (const item of textContent.items as any[]) {
+                        if (item.fontName && !fontMap.has(item.fontName)) {
+                            // Try to get font object
+                            try {
+                                const fontObj = page.commonObjs.get(item.fontName);
+                                if (fontObj && fontObj.name) {
+                                    const originalName = fontObj.name;
+                                    let cleanedName = originalName;
+                                    if (originalName.includes('+')) {
+                                        cleanedName = originalName.split('+').pop() || originalName;
+                                    }
+                                    cleanedName = cleanedName.split(',')[0].trim();
+                                    if (cleanedName) {
+                                        fontMap.set(item.fontName, { cleanName: cleanedName, originalName });
+                                    }
+                                } else {
+                                    // Use fontName as-is if no font object
+                                    const fontName = item.fontName;
+                                    fontMap.set(fontName, { cleanName: fontName, originalName: fontName });
+                                }
+                            } catch (e) {
+                                // Use fontName as fallback
+                                const fontName = item.fontName;
+                                if (fontName && !fontMap.has(fontName)) {
+                                    fontMap.set(fontName, { cleanName: fontName, originalName: fontName });
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Could not extract fonts from textContent:', e);
+                }
             }
 
             const textItems: TextItem[] = [];
@@ -75,7 +120,7 @@ export class TextExtractor {
 
                 const fontInfo = fontMap.get(item.fontName);
                 const realFont = fontInfo?.cleanName;
-                originalFontName = fontInfo?.originalName;  // Store original subset name
+                originalFontName = fontInfo?.originalName;  // Store original subset name (critical for backend)
 
                 if (realFont) {
                     const lower = realFont.toLowerCase();
@@ -100,8 +145,27 @@ export class TextExtractor {
                         fontFamily = 'Arial, Helvetica, sans-serif';
                         letterSpacing = '-0.01em';
                     } else {
+                        // Use the real font name with fallbacks
                         fontFamily = `${realFont}, Georgia, serif`;
                         letterSpacing = '0em';
+                    }
+                } else {
+                    // Fallback: use fontName from item if no font info found
+                    // This ensures we always have some font name
+                    if (item.fontName) {
+                        const lower = item.fontName.toLowerCase();
+                        if (lower.includes('bold')) fontWeight = 700;
+                        if (lower.includes('italic') || lower.includes('oblique')) fontStyle = 'italic';
+                        
+                        // Try to extract a reasonable font name
+                        let fallbackName = item.fontName;
+                        if (fallbackName.includes('+')) {
+                            fallbackName = fallbackName.split('+').pop() || fallbackName;
+                        }
+                        fallbackName = fallbackName.split(',')[0].trim();
+                        
+                        fontFamily = `${fallbackName}, Georgia, serif`;
+                        originalFontName = item.fontName; // Store as original
                     }
                 }
 

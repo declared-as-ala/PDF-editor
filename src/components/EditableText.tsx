@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { TextItem } from '../types/types';
+import { parseFontName, getCssFontFamily } from '../lib/FontParser';
 
 interface EditableTextProps {
     textItem: TextItem;
@@ -56,32 +57,35 @@ export const EditableText: React.FC<EditableTextProps> = ({
         }
     };
 
-    // Parse font name to get clean family and weight (memoized to prevent changes)
+    // Parse font to get family name (without weight suffix) and weight/style
+    // Google Fonts loads fonts by family name only, weight is applied via fontWeight CSS
     const fontInfo = React.useMemo(() => {
-        const parseFontName = (fontName: string): { family: string; weight: number } => {
-            // Remove subset prefix (e.g., "MUFUZY+Rubik-Medium" -> "Rubik-Medium")
-            let cleanName = fontName.replace(/^[A-Z]{6}\+/, '');
-
-            // Extract weight from name
-            let weight = 400;
-            if (cleanName.includes('Bold')) {
-                weight = 700;
-                cleanName = cleanName.replace(/[-\s]?Bold/i, '');
-            } else if (cleanName.includes('Medium')) {
-                weight = 500;
-                cleanName = cleanName.replace(/[-\s]?Medium/i, '');
-            } else if (cleanName.includes('Light')) {
-                weight = 300;
-                cleanName = cleanName.replace(/[-\s]?Light/i, '');
-            } else if (cleanName.includes('Regular')) {
-                cleanName = cleanName.replace(/[-\s]?Regular/i, '');
-            }
-
-            return { family: cleanName.trim(), weight };
+        const parsed = parseFontName(textItem.fontName || 'Georgia', textItem.originalFontName);
+        
+        // Get CSS font-family using only the family name (e.g., "Rubik" not "Rubik-Medium")
+        // This matches how Google Fonts loads fonts
+        const cssFontFamily = getCssFontFamily(parsed);
+        
+        const info = {
+            family: cssFontFamily, // Family name only (matches Google Fonts)
+            weight: textItem.fontWeight || parsed.weight, // Weight applied via fontWeight CSS
+            style: textItem.fontStyle || parsed.style, // Style applied via fontStyle CSS
         };
-
-        return parseFontName(textItem.fontName || 'Georgia');
-    }, [textItem.fontName]);
+        
+        // Debug log to verify font preservation
+        if (process.env.NODE_ENV === 'development') {
+            console.log('🎨 EditableText font info:', {
+                fontName: textItem.fontName,
+                originalFontName: textItem.originalFontName,
+                parsedFamily: parsed.family,
+                displayFamily: info.family,
+                weight: info.weight,
+                style: info.style,
+            });
+        }
+        
+        return info;
+    }, [textItem.fontName, textItem.originalFontName, textItem.fontWeight, textItem.fontStyle]);
 
     return (
         <div
@@ -112,8 +116,9 @@ export const EditableText: React.FC<EditableTextProps> = ({
                     border: 'none',
                     outline: isEditing ? '2px solid #4285f4' : 'none',
                     background: isEditing ? 'rgba(66, 133, 244, 0.1)' : 'transparent',
-                    fontFamily: fontInfo.family,
+                    fontFamily: fontInfo.family, // Exact fontName preserved
                     fontWeight: fontInfo.weight,
+                    fontStyle: fontInfo.style, // Preserve font style
                     fontSize: `${textItem.fontSize * scale}px`,
                     color: textItem.color || 'rgb(0, 0, 0)',
                     padding: 0,
