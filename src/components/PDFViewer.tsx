@@ -7,6 +7,7 @@ import { EditorToolbar } from './EditorToolbar';
 import { TextExtractor } from '../lib/TextExtractor';
 import { parseFontName, getCssFontFamily } from '../lib/FontParser';
 import { FontSelector } from './FontSelector';
+import { WordToolbar } from './WordToolbar';
 import { PDFEditor } from '../lib/PDFEditor';
 import type { TextItem } from '../types/types';
 
@@ -405,6 +406,54 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
         }
     };
 
+    const handleTextColorChange = (color: string) => {
+        if (!activeRegionId) return;
+        const textItem = extractedText.get(activeRegionId);
+        if (textItem) {
+            const updated: TextItem = {
+                ...textItem,
+                color: color,
+            };
+            setExtractedText(prev => new Map(prev).set(activeRegionId!, updated));
+        }
+    };
+
+    const handleAlignmentChange = (alignment: 'left' | 'center' | 'right' | 'justify') => {
+        if (!activeRegionId) return;
+        const textItem = extractedText.get(activeRegionId);
+        if (textItem) {
+            const updated: TextItem = {
+                ...textItem,
+                textAlign: alignment,
+            } as TextItem;
+            setExtractedText(prev => new Map(prev).set(activeRegionId!, updated));
+        }
+    };
+
+    const handleUnderlineChange = (underline: boolean) => {
+        if (!activeRegionId) return;
+        const textItem = extractedText.get(activeRegionId);
+        if (textItem) {
+            const updated: TextItem = {
+                ...textItem,
+                textDecoration: underline ? 'underline' : 'none',
+            } as TextItem;
+            setExtractedText(prev => new Map(prev).set(activeRegionId!, updated));
+        }
+    };
+
+    const handleFontSizeChange = (size: number) => {
+        if (!activeRegionId) return;
+        const textItem = extractedText.get(activeRegionId);
+        if (textItem) {
+            const updated: TextItem = {
+                ...textItem,
+                fontSize: size,
+            };
+            setExtractedText(prev => new Map(prev).set(activeRegionId!, updated));
+        }
+    };
+
     const handleExportPDF = async () => {
         if (!file || extractedText.size === 0) {
             alert('No edits to export');
@@ -509,6 +558,20 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
                 onReset={() => setExtractedText(new Map())}
                 onExport={handleExportPDF}
             />
+
+            {/* Word Toolbar - Microsoft Word style formatting toolbar */}
+            {file && (
+                <div className="word-toolbar-container">
+                    <WordToolbar
+                        textItem={activeText}
+                        onFontChange={handleFontChange}
+                        onTextColorChange={handleTextColorChange}
+                        onAlignmentChange={handleAlignmentChange}
+                        onUnderlineChange={handleUnderlineChange}
+                        onFontSizeChange={handleFontSizeChange}
+                    />
+                </div>
+            )}
 
             {/* Font Selector - draggable panel - Always visible when PDF is loaded */}
             {file && (

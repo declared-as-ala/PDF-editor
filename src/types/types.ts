@@ -16,6 +16,8 @@ export interface TextItem {
     pageNumber: number;
     transform: number[]; // PDF transformation matrix
     color?: string; // RGB color in CSS format
+    textAlign?: 'left' | 'center' | 'right' | 'justify'; // Text alignment
+    textDecoration?: string; // 'none' | 'underline' | 'line-through' | 'overline'
 }
 
 export interface TextModification {

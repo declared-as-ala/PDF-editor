@@ -652,6 +652,230 @@ body {
   background: var(--primary-dark);
 }
 
+/* Word Toolbar Styles - Microsoft Word style */
+.word-toolbar-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1500;
+  background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
+  border-bottom: 2px solid #dee2e6;
+  padding: 0.5rem 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.word-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 0.25rem 0;
+}
+
+.word-toolbar-placeholder {
+  color: #6c757d;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  text-align: center;
+  font-style: italic;
+}
+
+.word-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: nowrap;
+}
+
+.word-toolbar-separator {
+  width: 1px;
+  height: 28px;
+  background: #dee2e6;
+  margin: 0 0.25rem;
+  flex-shrink: 0;
+}
+
+.word-toolbar-select {
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: white;
+  font-size: 0.875rem;
+  cursor: pointer;
+  min-height: 32px;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.word-toolbar-select:hover {
+  border-color: #adb5bd;
+  background: #f8f9fa;
+}
+
+.word-toolbar-select:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+}
+
+.word-toolbar-font {
+  min-width: 140px;
+  font-weight: 500;
+}
+
+.word-toolbar-size {
+  min-width: 65px;
+  text-align: center;
+}
+
+.word-toolbar-btn {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #212529;
+  font-size: 0.95rem;
+  cursor: pointer;
+  min-width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  font-weight: 600;
+}
+
+.word-toolbar-btn:hover {
+  background: #e9ecef;
+  border-color: #ced4da;
+}
+
+.word-toolbar-btn.active {
+  background: #6366f1;
+  color: white;
+  border-color: #6366f1;
+  box-shadow: 0 1px 3px rgba(99, 102, 241, 0.3);
+}
+
+.word-toolbar-btn.active:hover {
+  background: #4f46e5;
+}
+
+.word-toolbar-color-wrapper {
+  position: relative;
+}
+
+.word-toolbar-color-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.7rem;
+}
+
+.color-icon {
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #212529;
+}
+
+.color-indicator {
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.word-toolbar-color-picker {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 0.5rem;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  min-width: 220px;
+}
+
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 0.3rem;
+  margin-bottom: 0.75rem;
+}
+
+.color-swatch {
+  width: 26px;
+  height: 26px;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s;
+}
+
+.color-swatch:hover {
+  transform: scale(1.15);
+  border-color: #6366f1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.color-input {
+  width: 100%;
+  height: 36px;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.word-toolbar-alignment-wrapper {
+  position: relative;
+}
+
+.word-toolbar-alignment-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 0.5rem;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 120px;
+}
+
+.word-toolbar-alignment-menu button {
+  padding: 0.6rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  transition: all 0.2s;
+}
+
+.word-toolbar-alignment-menu button:hover {
+  background: #e9ecef;
+}
+
+.word-toolbar-alignment-menu button.active {
+  background: #6366f1;
+  color: white;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .app-header h1 {
@@ -685,6 +909,29 @@ body {
     width: 100%;
     justify-content: center;
     flex-wrap: wrap;
+  }
+
+  .word-toolbar-container {
+    padding: 0.5rem;
+  }
+  
+  .word-toolbar-group {
+    gap: 0.125rem;
+  }
+  
+  .word-toolbar-select {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.5rem;
+  }
+  
+  .word-toolbar-font {
+    min-width: 100px;
+  }
+
+  .word-toolbar-btn {
+    min-width: 28px;
+    height: 28px;
+    font-size: 0.85rem;
   }
 
   .side-by-side-container {

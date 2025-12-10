@@ -121,6 +121,8 @@ export const EditableText: React.FC<EditableTextProps> = ({
                     fontStyle: fontInfo.style, // Preserve font style
                     fontSize: `${textItem.fontSize * scale}px`,
                     color: textItem.color || 'rgb(0, 0, 0)',
+                    textAlign: (textItem.textAlign || 'left') as 'left' | 'center' | 'right' | 'justify',
+                    textDecoration: textItem.textDecoration || 'none',
                     padding: 0,
                     margin: 0,
                     resize: 'none',
