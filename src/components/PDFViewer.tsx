@@ -24,7 +24,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
 
     // Font selector position and dragging state
     const [fontSelectorPosition, setFontSelectorPosition] = useState({ 
-        x: window.innerWidth - 280, 
+        x: typeof window !== 'undefined' ? Math.max(20, window.innerWidth - 280) : 20, 
         y: 140 
     });
     const [isDragging, setIsDragging] = useState(false);
@@ -350,8 +350,17 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
         }
     }, [isDragging, dragOffset]);
 
-    // Keep font selector within window bounds on resize
+    // Initialize font selector position on mount
     useEffect(() => {
+        const initPosition = () => {
+            const x = Math.max(20, window.innerWidth - 280);
+            const y = 140;
+            setFontSelectorPosition({ x, y });
+        };
+        
+        initPosition();
+        
+        // Keep font selector within window bounds on resize
         const handleResize = () => {
             setFontSelectorPosition(prev => ({
                 x: Math.max(10, Math.min(prev.x, window.innerWidth - 270)),
@@ -368,6 +377,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
     const activeText: TextItem | null = activeRegionId ? (extractedText.get(activeRegionId) ?? null) : null;
     console.log('🎯 Active region ID:', activeRegionId);
     console.log('📝 Active text:', activeText);
+    console.log('🎨 Font selector position:', fontSelectorPosition);
 
     const handleFontChange = (fontName: string, fontWeight: number, fontStyle: string) => {
         if (!activeRegionId) return;
@@ -500,33 +510,37 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
                 onExport={handleExportPDF}
             />
 
-            {/* Font Selector - draggable panel */}
-            <div 
-                className="font-selector-container"
-                style={{
-                    position: 'fixed',
-                    left: `${fontSelectorPosition.x}px`,
-                    top: `${fontSelectorPosition.y}px`,
-                    zIndex: 2000,
-                    cursor: isDragging ? 'grabbing' : 'default',
-                }}
-            >
-                <FontSelector
-                    textItem={activeText}
-                    onFontChange={handleFontChange}
-                    onDragStart={(e) => {
-                        setIsDragging(true);
-                        const container = document.querySelector('.font-selector-container') as HTMLElement;
-                        if (container) {
-                            const rect = container.getBoundingClientRect();
-                            setDragOffset({
-                                x: e.clientX - rect.left,
-                                y: e.clientY - rect.top,
-                            });
-                        }
+            {/* Font Selector - draggable panel - Always visible when PDF is loaded */}
+            {file && (
+                <div 
+                    className="font-selector-container"
+                    style={{
+                        position: 'fixed',
+                        left: `${fontSelectorPosition.x}px`,
+                        top: `${fontSelectorPosition.y}px`,
+                        zIndex: 2000,
+                        cursor: isDragging ? 'grabbing' : 'default',
+                        display: 'block',
+                        visibility: 'visible',
                     }}
-                />
-            </div>
+                >
+                    <FontSelector
+                        textItem={activeText}
+                        onFontChange={handleFontChange}
+                        onDragStart={(e) => {
+                            setIsDragging(true);
+                            const container = document.querySelector('.font-selector-container') as HTMLElement;
+                            if (container) {
+                                const rect = container.getBoundingClientRect();
+                                setDragOffset({
+                                    x: e.clientX - rect.left,
+                                    y: e.clientY - rect.top,
+                                });
+                            }
+                        }}
+                    />
+                </div>
+            )}
 
             <div className="pdf-controls">
                 <div className="control-group">
