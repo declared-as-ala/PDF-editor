@@ -33,18 +33,17 @@
         console.error('❌ @pdf-lib/fontkit not found:', e);
     }
 
-    // Check 4: Backend health
-    fetch('http://localhost:5000/health')
-        .then(r => {
-            if (r.ok) {
-                console.log('✅ Backend is running');
-            } else {
-                console.warn('⚠️ Backend returned error:', r.status);
-            }
-        })
-        .catch(e => {
-            console.error('❌ Backend not reachable. Run: cd backend && python app.py');
-        });
+    // Check 4: PDF.js available
+    try {
+        const pdfjs = (window as any).pdfjsLib;
+        if (pdfjs) {
+            console.log('✅ PDF.js is available');
+        } else {
+            console.warn('⚠️ PDF.js not loaded');
+        }
+    } catch (e) {
+        console.error('❌ PDF.js check failed:', e);
+    }
 
     console.log('\n📊 Diagnostics complete!');
 };

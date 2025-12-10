@@ -5,10 +5,9 @@ import { HoverBox } from './HoverBox';
 import { EditableText } from './EditableText';
 import { EditorToolbar } from './EditorToolbar';
 import { TextExtractor } from '../lib/TextExtractor';
-import { BackendFontService } from '../lib/BackendFontService';
-import { fontManager } from '../lib/FontManager';
-import { parseFontName, getCssFontFamily, getBackendFontName } from '../lib/FontParser';
+import { parseFontName, getCssFontFamily } from '../lib/FontParser';
 import { FontSelector } from './FontSelector';
+import { PDFEditor } from '../lib/PDFEditor';
 import type { TextItem } from '../types/types';
 
 interface PDFViewerProps {
@@ -21,7 +20,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [scale, setScale] = useState<number>(0.8);  // Start with smaller scale to fit screen
     const [pdfDocument, setPdfDocument] = useState<any>(null);
-    const [extractedFonts, setExtractedFonts] = useState<Map<string, Uint8Array>>(new Map());  // Fonts from backend
+    const [originalPdfBytes, setOriginalPdfBytes] = useState<Uint8Array | null>(null);
 
     // Hover boxes state
     const [textRegions, setTextRegions] = useState<Array<{
@@ -55,32 +54,19 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
                 const regions = await TextExtractor.extractTextRegions(pdf, 1);
                 setTextRegions(regions);
 
-                // Extract fonts from backend
-                console.log('🔄 Extracting fonts from PDF via backend...');
-                const backendService = new BackendFontService();
-
-                const isBackendAvailable = await backendService.checkBackendHealth();
-                if (!isBackendAvailable) {
-                    console.warn('⚠️ Backend is not available. Run: cd backend && python app.py');
-                } else {
-                    try {
-                        const fonts = await backendService.extractFonts(file);
-                        setExtractedFonts(fonts);
-                        console.log(`✅ Extracted ${fonts.size} fonts from backend`);
-                    } catch (error) {
-                        console.error('❌ Font extraction failed:', error);
-                    }
-                }
+                // Store original PDF bytes for editing
+                setOriginalPdfBytes(uint8Array);
+                console.log('✅ PDF loaded and ready for editing');
             } catch (error) {
                 console.error('Error loading PDF document:', error);
             }
         }
     };
 
-    // Download full fonts from Google Fonts for browser display AND PDF export
+    // Load Google Fonts for browser display and PDF export
     useEffect(() => {
         const loadFonts = async () => {
-            console.log('🌐 Loading fonts for PDF display and editing...');
+            console.log('🌐 Loading Google Fonts for PDF display and editing...');
 
             const { fontLoader } = await import('../lib/FontLoader');
 
@@ -101,52 +87,11 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
                 }
             }
 
-            // Also load fonts from extracted PDF fonts
-            if (extractedFonts.size > 0) {
-                console.log('🌐 Loading fonts from PDF...');
-                
-                // Get unique font families and collect all weights
-                const fontFamilies = new Map<string, Set<number>>();
-
-                for (const [name] of extractedFonts.entries()) {
-                    const { family, weights } = fontLoader.parseFontInfo(name);
-                    if (!fontFamilies.has(family)) {
-                        fontFamilies.set(family, new Set());
-                    }
-                    weights.forEach(w => fontFamilies.get(family)!.add(w));
-                }
-
-                // Load each family once with all its weights for browser display
-                for (const [family, weightsSet] of fontFamilies.entries()) {
-                    const weights = Array.from(weightsSet).sort((a, b) => a - b);
-                    try {
-                        await fontLoader.loadGoogleFont(family, weights);
-                        console.log(`✅ Loaded PDF font: ${family}`);
-
-                        // Download full font files from Google Fonts for PDF export
-                        for (const weight of weights) {
-                            try {
-                                const fontBytes = await fontLoader.downloadGoogleFontFile(family, weight);
-                                if (fontBytes) {
-                                    const fontName = `${family}-${weight}`;
-                                    await fontManager.registerFont(fontName, fontBytes, 'google');
-                                    console.log(`✅ Registered Google Font "${fontName}" for PDF export`);
-                                }
-                            } catch (error) {
-                                console.warn(`⚠️ Failed to download/register ${family} ${weight}:`, error);
-                            }
-                        }
-                    } catch (error) {
-                        console.warn(`⚠️ Failed to load PDF font ${family}:`, error);
-                    }
-                }
-            }
-
-            console.log(`✅ All fonts loaded for editing and PDF export`);
+            console.log(`✅ All fonts loaded for editing`);
         };
 
         loadFonts();
-    }, [extractedFonts]);
+    }, []);
 
     // Extract regions when page changes
     useEffect(() => {
@@ -343,61 +288,20 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
     };
 
     const handleExportPDF = async () => {
-        if (!file || extractedText.size === 0) {
+        if (!file || !originalPdfBytes || extractedText.size === 0) {
             alert('No edits to export');
             return;
         }
 
         try {
-            console.log('📦 Sending edits to backend for PDF modification...');
+            console.log('📦 Editing PDF with pdf-lib (frontend-only)...');
 
-            // Prepare edit instructions
-            const edits = Array.from(extractedText.values()).map(textItem => {
-                // Parse font to get proper backend font name
-                const parsed = parseFontName(textItem.fontName || 'Georgia', textItem.originalFontName);
-                const backendFontName = getBackendFontName(parsed);
-                
-                return {
-                    pageNumber: textItem.pageNumber,
-                    originalText: '', // Not needed for backend
-                    newText: textItem.text,
-                    x: textItem.x,
-                    y: textItem.y,
-                    width: textItem.width,
-                    height: textItem.height,
-                    fontSize: textItem.fontSize,
-                    fontName: backendFontName, // Use originalFontName if available, otherwise cleanName
-                    fontWeight: parsed.weight || textItem.fontWeight || 400,
-                    color: textItem.color
-                };
-            });
-
-            console.log(`📝 Sending ${edits.length} edits to backend`);
-
-            // Send to backend
-            const formData = new FormData();
-            formData.append('pdf', file);
-            formData.append('edits', JSON.stringify(edits));
-
-            const response = await fetch('http://localhost:5000/api/edit-pdf', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) {
-                throw new Error(`Backend error: ${response.statusText}`);
-            }
+            // Edit PDF using pdf-lib
+            const modifiedPdfBytes = await PDFEditor.editPDF(originalPdfBytes, extractedText);
 
             // Download the modified PDF
-            const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `edited_${new Date().getTime()}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            const filename = `edited_${new Date().getTime()}.pdf`;
+            PDFEditor.downloadPDF(modifiedPdfBytes, filename);
 
             console.log('✅ PDF exported successfully');
             alert('PDF exported successfully!');

@@ -66,7 +66,9 @@ export class FontManager {
             // Create browser FontFace
             let browserFont: FontFace | undefined;
             try {
-                browserFont = new FontFace(cleanName, bytes);
+                // Convert Uint8Array to ArrayBuffer for FontFace
+                const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+                browserFont = new FontFace(cleanName, arrayBuffer);
                 await browserFont.load();
                 document.fonts.add(browserFont);
                 console.log(`✅ FontManager: Loaded "${cleanName}" into browser`);

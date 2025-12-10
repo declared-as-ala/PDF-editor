@@ -1,11 +1,11 @@
 # PDF Editor
 
-A modern, full-featured PDF editor built with React, TypeScript, and Python. Edit text in PDFs with accurate font preservation, style customization, and seamless export functionality.
+A modern, full-featured PDF editor built with React and TypeScript. Edit text in PDFs with accurate font preservation, style customization, and seamless export functionality - **100% frontend-only, no backend required!**
 
 ![PDF Editor](https://img.shields.io/badge/PDF-Editor-blue)
 ![React](https://img.shields.io/badge/React-19.2.0-61dafb)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3-3178c6)
-![Python](https://img.shields.io/badge/Python-3.x-3776ab)
+![Frontend Only](https://img.shields.io/badge/Frontend-Only-green)
 
 ## ✨ Features
 
@@ -14,23 +14,23 @@ A modern, full-featured PDF editor built with React, TypeScript, and Python. Edi
 - ✅ **Font Preservation** - Maintains original fonts and styles accurately
 - ✅ **Font Selector** - Choose from 15+ fonts with customizable weights and styles
 - ✅ **Real-time Preview** - See your changes instantly as you type
-- ✅ **PDF Export** - Export edited PDFs with preserved formatting
+- ✅ **PDF Export** - Export edited PDFs with preserved formatting (frontend-only)
 - ✅ **Multi-page Support** - Navigate and edit across multiple pages
 - ✅ **Zoom Controls** - Zoom from 50% to 300% for precise editing
+- ✅ **No Backend Required** - Everything runs in your browser!
 
 ### Advanced Features
 - 🎨 **Smart Font Matching** - Automatically detects and preserves PDF fonts
 - 🔤 **Google Fonts Integration** - Loads fonts dynamically for editing
 - 📝 **Text Extraction** - Accurate text extraction with position and style data
 - 🎯 **Hover Boxes** - Visual indicators for editable text regions
-- 💾 **Backend Processing** - Python backend for reliable PDF manipulation
+- 💾 **Client-side Processing** - All PDF editing happens in the browser
 - 🌐 **Cross-platform** - Works on Windows, macOS, and Linux
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - Node.js 18+ and npm
-- Python 3.8+
 - Git
 
 ### Installation
@@ -41,41 +41,22 @@ git clone https://github.com/declared-as-ala/PDF-editor.git
 cd pdf-editor
 ```
 
-2. **Install frontend dependencies**
+2. **Install dependencies**
 ```bash
 npm install
 ```
 
-3. **Set up Python backend**
-```bash
-cd backend
-python -m venv venv
-
-# On Windows
-venv\Scripts\activate
-
-# On macOS/Linux
-source venv/bin/activate
-
-pip install -r requirements.txt
-```
-
 ### Running the Application
 
-1. **Start the backend server** (in `backend` directory)
-```bash
-python app.py
-```
-The backend will run on `http://localhost:5000`
-
-2. **Start the frontend** (in root directory)
+**Start the development server**
 ```bash
 npm run dev
 ```
-The frontend will run on `http://localhost:5173`
 
-3. **Open your browser**
+**Open your browser**
 Navigate to `http://localhost:5173` and start editing PDFs!
+
+That's it! No backend setup needed - everything runs in your browser.
 
 ## 📖 Usage Guide
 
@@ -111,14 +92,10 @@ pdf-editor/
 │   │   ├── FontManager.ts     # Font registry and management
 │   │   ├── FontLoader.ts      # Google Fonts loader
 │   │   ├── TextExtractor.ts   # PDF text extraction
-│   │   └── PDFEditor.ts       # PDF manipulation utilities
+│   │   └── PDFEditor.ts       # PDF manipulation (pdf-lib)
 │   ├── types/
 │   │   └── types.ts           # TypeScript type definitions
 │   └── App.tsx                # Main application component
-├── backend/
-│   ├── app.py                 # Flask API server
-│   ├── google_fonts_downloader.py  # Font downloader
-│   └── requirements.txt       # Python dependencies
 └── README.md                  # This file
 ```
 
@@ -130,13 +107,7 @@ pdf-editor/
 - **Vite** - Build tool and dev server
 - **react-pdf** - PDF rendering
 - **pdfjs-dist** - PDF.js library for text extraction
-- **pdf-lib** - PDF manipulation
-
-### Backend
-- **Python 3.8+** - Server language
-- **Flask** - Web framework
-- **PyMuPDF (fitz)** - PDF processing
-- **Flask-CORS** - Cross-origin resource sharing
+- **pdf-lib** - PDF manipulation (client-side)
 
 ## 🎨 Available Fonts
 
@@ -149,43 +120,32 @@ All fonts support multiple weights (100-900) and styles (normal/italic).
 
 ## 🔧 Configuration
 
-### Backend Configuration
-Edit `backend/app.py` to change the server port:
-```python
-port = int(os.environ.get('PORT', 5000))
-```
-
-### Frontend Configuration
-The backend URL is configured in `src/lib/BackendFontService.ts`:
+### Development
+The app runs on `http://localhost:5173` by default. To change the port, edit `vite.config.ts`:
 ```typescript
-const BACKEND_URL = 'http://localhost:5000';
+server: {
+  port: 5173
+}
 ```
 
-## 📝 API Endpoints
+### Build for Production
+```bash
+npm run build
+```
 
-### Backend API
-
-- `POST /api/extract-fonts` - Extract fonts from PDF
-  - Request: FormData with `pdf` file
-  - Response: JSON with font data and metadata
-
-- `POST /api/edit-pdf` - Edit PDF text
-  - Request: FormData with `pdf` file and `edits` JSON
-  - Response: Modified PDF file
-
-- `GET /health` - Health check endpoint
+The built files will be in the `dist` directory, ready to deploy to any static hosting service.
 
 ## 🐛 Troubleshooting
 
 ### Fonts not displaying correctly
-- Ensure the backend server is running
 - Check browser console for font loading errors
 - Verify Google Fonts are accessible (check internet connection)
+- Try refreshing the page
 
 ### PDF export fails
-- Make sure backend server is running on port 5000
-- Check browser console for API errors
+- Check browser console for errors
 - Verify the PDF file is not corrupted
+- Make sure you have made at least one edit before exporting
 
 ### Text not editable
 - Click directly on the text region
@@ -214,7 +174,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🙏 Acknowledgments
 
 - [react-pdf](https://github.com/wojtekmaj/react-pdf) - PDF rendering library
-- [PyMuPDF](https://github.com/pymupdf/PyMuPDF) - Python PDF library
+- [pdf-lib](https://github.com/Hopding/pdf-lib) - PDF manipulation library
 - [Google Fonts](https://fonts.google.com/) - Font library
 
 ## 📞 Support
@@ -223,4 +183,4 @@ If you encounter any issues or have questions, please open an issue on GitHub.
 
 ---
 
-Made with ❤️ using React, TypeScript, and Python
+Made with ❤️ using React, TypeScript, and pdf-lib - **100% frontend, zero backend!**

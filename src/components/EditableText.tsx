@@ -73,7 +73,7 @@ export const EditableText: React.FC<EditableTextProps> = ({
         };
         
         // Debug log to verify font preservation
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
             console.log('🎨 EditableText font info:', {
                 fontName: textItem.fontName,
                 originalFontName: textItem.originalFontName,
