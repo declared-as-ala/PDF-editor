@@ -135,6 +135,17 @@ export class PDFEditor {
                         borderWidth: 0,
                     });
 
+                    // Clean text - remove null characters and other problematic characters
+                    const cleanText = item.text
+                        .replace(/\0/g, '') // Remove null characters
+                        .replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '') // Remove control characters
+                        .trim();
+                    
+                    if (!cleanText) {
+                        console.warn(`⚠️ Skipping empty text item: ${item.id}`);
+                        continue;
+                    }
+
                     // Try to use custom font, fallback to standard font
                     try {
                         // Try to load Google Font
@@ -143,7 +154,7 @@ export class PDFEditor {
                         
                         if (fontBytes) {
                             const customFont = await pdfDoc.embedFont(fontBytes);
-                            page.drawText(item.text, {
+                            page.drawText(cleanText, {
                                 x: item.x,
                                 y: height - item.y - item.fontSize,
                                 size: item.fontSize,
@@ -173,7 +184,7 @@ export class PDFEditor {
                             : await pdfDoc.embedFont(StandardFonts.Helvetica);
                     }
 
-                    page.drawText(item.text, {
+                    page.drawText(cleanText, {
                         x: item.x,
                         y: height - item.y - item.fontSize,
                         size: item.fontSize,

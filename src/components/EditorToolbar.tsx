@@ -9,6 +9,7 @@ interface EditorToolbarProps {
     onUndo: () => void;
     onReset: () => void;
     onExport: () => void;
+    onAddTextBox?: () => void;
 }
 
 export const EditorToolbar: React.FC<EditorToolbarProps> = ({
@@ -20,6 +21,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     onUndo,
     onReset,
     onExport,
+    onAddTextBox,
 }) => {
     return (
         <div className="editor-toolbar">
@@ -40,6 +42,16 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                 >
                     {isEditMode ? '✏️ Exit Edit Mode' : '✏️ Enter Edit Mode'}
                 </button>
+
+                {onAddTextBox && (
+                    <button
+                        onClick={onAddTextBox}
+                        className="toolbar-btn"
+                        title="Add new text box"
+                    >
+                        ➕ Add Text Box
+                    </button>
+                )}
             </div>
 
             <div className="toolbar-section">
