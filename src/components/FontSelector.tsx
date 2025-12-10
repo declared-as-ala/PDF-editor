@@ -4,6 +4,7 @@ import type { TextItem } from '../types/types';
 interface FontSelectorProps {
     textItem: TextItem | null;
     onFontChange: (fontName: string, fontWeight: number, fontStyle: string) => void;
+    onDragStart?: (e: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 // Popular Google Fonts available
@@ -41,7 +42,7 @@ const FONT_STYLES = [
     { label: 'Italic', value: 'italic' },
 ];
 
-export const FontSelector: React.FC<FontSelectorProps> = ({ textItem, onFontChange }) => {
+export const FontSelector: React.FC<FontSelectorProps> = ({ textItem, onFontChange, onDragStart }) => {
     if (!textItem) {
         return (
             <div className="font-selector">
@@ -91,10 +92,26 @@ export const FontSelector: React.FC<FontSelectorProps> = ({ textItem, onFontChan
         onFontChange(textItem.fontName, currentWeight, style);
     };
 
+    const handleHeaderMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+        // Only start dragging if clicking on the header itself, not on child elements like selects
+        const target = e.target as HTMLElement;
+        if (target.closest('select') || target.closest('option') || target.closest('button')) {
+            return; // Don't drag if clicking on interactive elements
+        }
+        e.preventDefault();
+        if (onDragStart) {
+            onDragStart(e);
+        }
+    };
+
     return (
         <div className="font-selector">
-            <div className="font-selector-header">
+            <div 
+                className="font-selector-header"
+                onMouseDown={handleHeaderMouseDown}
+            >
                 <span className="font-selector-title">🎨 Font Style</span>
+                <span className="font-selector-drag-icon" title="Drag to move">⋮⋮</span>
             </div>
             
             <div className="font-selector-controls">

@@ -22,6 +22,48 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
     const [pdfDocument, setPdfDocument] = useState<any>(null);
     const [originalPdfBytes, setOriginalPdfBytes] = useState<Uint8Array | null>(null);
 
+    // Font selector position and dragging state
+    const [fontSelectorPosition, setFontSelectorPosition] = useState({ 
+        x: window.innerWidth - 280, 
+        y: 140 
+    });
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+    // Store PDF bytes immediately when file changes
+    // This ensures we have the bytes available even if File.arrayBuffer() can't be called again
+    useEffect(() => {
+        if (file && !originalPdfBytes) {
+            const storePdfBytes = async () => {
+                try {
+                    console.log('📥 Reading PDF file to store bytes...');
+                    const arrayBuffer = await file.arrayBuffer();
+                    const uint8Array = new Uint8Array(arrayBuffer);
+                    
+                    // Validate PDF header
+                    if (uint8Array.length >= 4) {
+                        const header = String.fromCharCode(...uint8Array.slice(0, 4));
+                        if (header === '%PDF') {
+                            // Create a copy to ensure it persists independently
+                            const bytesCopy = new Uint8Array(uint8Array.length);
+                            bytesCopy.set(uint8Array);
+                            setOriginalPdfBytes(bytesCopy);
+                            console.log(`✅ PDF bytes stored successfully (${bytesCopy.length} bytes)`);
+                        } else {
+                            console.warn(`⚠️ Invalid PDF header: "${header}"`);
+                        }
+                    } else {
+                        console.warn('⚠️ PDF file is too small');
+                    }
+                } catch (error) {
+                    console.error('❌ Error storing PDF bytes:', error);
+                }
+            };
+            
+            storePdfBytes();
+        }
+    }, [file, originalPdfBytes]);
+
     // Hover boxes state
     const [textRegions, setTextRegions] = useState<Array<{
         id: string;
@@ -42,10 +84,32 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
         setCurrentPage(1);
 
         // Get the PDF document
+        // Use stored bytes if available, otherwise read from file
         if (file) {
             try {
-                const arrayBuffer = await file.arrayBuffer();
-                const uint8Array = new Uint8Array(arrayBuffer);
+                let uint8Array: Uint8Array;
+                
+                // Prefer stored bytes to avoid reading file twice
+                if (originalPdfBytes && originalPdfBytes.length > 0) {
+                    uint8Array = originalPdfBytes;
+                    console.log('✅ Using stored PDF bytes for rendering');
+                } else {
+                    // Read from file if bytes not stored yet
+                    console.log('📥 Reading PDF file for rendering...');
+                    const arrayBuffer = await file.arrayBuffer();
+                    uint8Array = new Uint8Array(arrayBuffer);
+                    
+                    // Store a copy for future use
+                    if (uint8Array.length >= 4) {
+                        const header = String.fromCharCode(...uint8Array.slice(0, 4));
+                        if (header === '%PDF') {
+                            const bytesCopy = new Uint8Array(uint8Array.length);
+                            bytesCopy.set(uint8Array);
+                            setOriginalPdfBytes(bytesCopy);
+                        }
+                    }
+                }
+                
                 const loadingTask = (window as any).pdfjsLib.getDocument({ data: uint8Array });
                 const pdf = await loadingTask.promise;
                 setPdfDocument(pdf);
@@ -54,8 +118,6 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
                 const regions = await TextExtractor.extractTextRegions(pdf, 1);
                 setTextRegions(regions);
 
-                // Store original PDF bytes for editing
-                setOriginalPdfBytes(uint8Array);
                 console.log('✅ PDF loaded and ready for editing');
             } catch (error) {
                 console.error('Error loading PDF document:', error);
@@ -255,6 +317,52 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
     const zoomOut = () => setScale(prev => Math.max(prev - 0.2, 0.5));
     const resetZoom = () => setScale(1.0);
 
+    // Font selector dragging handlers
+    const handleMouseMove = (e: MouseEvent) => {
+        if (isDragging) {
+            const newX = e.clientX - dragOffset.x;
+            const newY = e.clientY - dragOffset.y;
+            
+            // Keep within window bounds
+            const maxX = window.innerWidth - 260;
+            const maxY = window.innerHeight - 200;
+            
+            setFontSelectorPosition({
+                x: Math.max(10, Math.min(newX, maxX)),
+                y: Math.max(10, Math.min(newY, maxY)),
+            });
+        }
+    };
+
+    const handleMouseUp = () => {
+        setIsDragging(false);
+    };
+
+    // Mouse move/up listeners for dragging
+    useEffect(() => {
+        if (isDragging) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            return () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            };
+        }
+    }, [isDragging, dragOffset]);
+
+    // Keep font selector within window bounds on resize
+    useEffect(() => {
+        const handleResize = () => {
+            setFontSelectorPosition(prev => ({
+                x: Math.max(10, Math.min(prev.x, window.innerWidth - 270)),
+                y: Math.max(10, Math.min(prev.y, window.innerHeight - 210)),
+            }));
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     if (!file) return null;
 
     const activeText: TextItem | null = activeRegionId ? (extractedText.get(activeRegionId) ?? null) : null;
@@ -288,7 +396,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
     };
 
     const handleExportPDF = async () => {
-        if (!file || !originalPdfBytes || extractedText.size === 0) {
+        if (!file || extractedText.size === 0) {
             alert('No edits to export');
             return;
         }
@@ -296,8 +404,62 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
         try {
             console.log('📦 Editing PDF with pdf-lib (frontend-only)...');
 
+            // Always read from file object to ensure we have fresh bytes
+            // File.arrayBuffer() can only be called once, so we need to handle this carefully
+            let pdfBytes: Uint8Array;
+            
+            if (originalPdfBytes && originalPdfBytes.length > 0) {
+                // Use stored bytes if available and valid
+                pdfBytes = originalPdfBytes;
+                console.log(`✅ Using stored PDF bytes (${pdfBytes.length} bytes)`);
+            } else {
+                // Re-read file if bytes not available
+                console.log('⚠️ PDF bytes not stored, reading from file...');
+                
+                // Read file as array buffer
+                const arrayBuffer = await file.arrayBuffer();
+                
+                if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+                    throw new Error('Failed to read PDF file: file is empty or could not be read');
+                }
+                
+                pdfBytes = new Uint8Array(arrayBuffer);
+                
+                // Validate PDF header
+                if (pdfBytes.length < 4) {
+                    throw new Error('PDF file is too small or corrupted');
+                }
+                
+                const header = String.fromCharCode(...pdfBytes.slice(0, 4));
+                if (header !== '%PDF') {
+                    throw new Error(`Invalid PDF file: Expected PDF header "%PDF", got "${header}"`);
+                }
+                
+                // Create a copy to ensure it persists
+                const bytesCopy = new Uint8Array(pdfBytes.length);
+                bytesCopy.set(pdfBytes);
+                pdfBytes = bytesCopy;
+                
+                // Store for future use
+                setOriginalPdfBytes(bytesCopy);
+                
+                console.log(`✅ PDF file read successfully (${pdfBytes.length} bytes)`);
+            }
+
+            // Final validation before passing to pdf-lib
+            if (!pdfBytes || pdfBytes.length === 0) {
+                throw new Error('PDF bytes are empty or invalid. Please reload the PDF file.');
+            }
+            
+            // Validate PDF header one more time
+            const header = String.fromCharCode(...pdfBytes.slice(0, 4));
+            if (header !== '%PDF') {
+                throw new Error(`Invalid PDF data: Expected PDF header "%PDF", got "${header}". The file may have been corrupted.`);
+            }
+
             // Edit PDF using pdf-lib
-            const modifiedPdfBytes = await PDFEditor.editPDF(originalPdfBytes, extractedText);
+            console.log(`📝 Processing ${extractedText.size} text edits...`);
+            const modifiedPdfBytes = await PDFEditor.editPDF(pdfBytes, extractedText);
 
             // Download the modified PDF
             const filename = `edited_${new Date().getTime()}.pdf`;
@@ -308,7 +470,8 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
 
         } catch (error) {
             console.error('❌ Error exporting PDF:', error);
-            alert(`Error exporting PDF: ${error}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            alert(`Error exporting PDF: ${errorMessage}\n\nCheck the browser console for more details.`);
         }
     };
 
@@ -337,11 +500,31 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ file, onClose }) => {
                 onExport={handleExportPDF}
             />
 
-            {/* Font Selector - shows when text is selected */}
-            <div className="font-selector-container">
+            {/* Font Selector - draggable panel */}
+            <div 
+                className="font-selector-container"
+                style={{
+                    position: 'fixed',
+                    left: `${fontSelectorPosition.x}px`,
+                    top: `${fontSelectorPosition.y}px`,
+                    zIndex: 2000,
+                    cursor: isDragging ? 'grabbing' : 'default',
+                }}
+            >
                 <FontSelector
                     textItem={activeText}
                     onFontChange={handleFontChange}
+                    onDragStart={(e) => {
+                        setIsDragging(true);
+                        const container = document.querySelector('.font-selector-container') as HTMLElement;
+                        if (container) {
+                            const rect = container.getBoundingClientRect();
+                            setDragOffset({
+                                x: e.clientX - rect.left,
+                                y: e.clientY - rect.top,
+                            });
+                        }
+                    }}
                 />
             </div>
 

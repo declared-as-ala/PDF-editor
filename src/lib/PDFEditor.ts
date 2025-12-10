@@ -78,6 +78,19 @@ export class PDFEditor {
         try {
             console.log('📝 Editing PDF with pdf-lib (frontend-only)...');
             
+            // Validate PDF bytes
+            if (!originalPdfBytes || originalPdfBytes.length === 0) {
+                throw new Error('PDF bytes are empty or invalid');
+            }
+            
+            // Validate PDF header
+            const header = String.fromCharCode(...originalPdfBytes.slice(0, 4));
+            if (header !== '%PDF') {
+                throw new Error(`Invalid PDF file: Expected PDF header, got "${header}"`);
+            }
+            
+            console.log(`📄 PDF size: ${originalPdfBytes.length} bytes`);
+            
             // Load the original PDF
             const pdfDoc = await PDFDocument.load(originalPdfBytes);
             

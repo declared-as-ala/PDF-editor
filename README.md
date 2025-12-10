@@ -13,6 +13,7 @@ A modern, full-featured PDF editor built with React and TypeScript. Edit text in
 - ✅ **PDF Text Editing** - Click and edit any text in your PDF
 - ✅ **Font Preservation** - Maintains original fonts and styles accurately
 - ✅ **Font Selector** - Choose from 15+ fonts with customizable weights and styles
+- ✅ **Draggable Font Panel** - Drag the Font Style panel anywhere on screen for optimal workflow
 - ✅ **Real-time Preview** - See your changes instantly as you type
 - ✅ **PDF Export** - Export edited PDFs with preserved formatting (frontend-only)
 - ✅ **Multi-page Support** - Navigate and edit across multiple pages
@@ -68,7 +69,8 @@ That's it! No backend setup needed - everything runs in your browser.
    - Font family (Arial, Times New Roman, Roboto, etc.)
    - Font weight (Thin to Black)
    - Font style (Normal or Italic)
-5. Click outside the text or press Enter to finish editing
+5. **Drag the Font Style panel** - Click and drag the header (or ⋮⋮ icon) to move it anywhere on screen
+6. Click outside the text or press Enter to finish editing
 
 ### Exporting PDF
 1. Make your edits

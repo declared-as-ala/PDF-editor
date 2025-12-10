@@ -422,12 +422,15 @@ body {
 /* Font Selector Styles */
 .font-selector-container {
   position: fixed;
-  top: 140px;
-  right: 20px;
   z-index: 2000;
   width: 260px;
   max-height: calc(100vh - 160px);
   overflow-y: auto;
+  user-select: none;
+}
+
+.font-selector-container:active {
+  cursor: grabbing !important;
 }
 
 /* Responsive positioning - move to bottom on smaller screens */
@@ -461,6 +464,24 @@ body {
   margin-bottom: 0.75rem;
   border-bottom: 1px solid rgba(99, 102, 241, 0.2);
   padding-bottom: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: grab;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.font-selector-header:hover {
+  background-color: rgba(99, 102, 241, 0.1);
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
+  margin: -0.25rem -0.5rem 0.75rem -0.5rem;
+}
+
+.font-selector-header:active {
+  cursor: grabbing;
+  background-color: rgba(99, 102, 241, 0.2);
 }
 
 .font-selector-title {
@@ -468,6 +489,20 @@ body {
   font-weight: 600;
   font-size: 0.9rem;
   letter-spacing: 0.5px;
+}
+
+.font-selector-drag-icon {
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  opacity: 0.6;
+  line-height: 1;
+  cursor: grab;
+  user-select: none;
+}
+
+.font-selector-drag-icon:hover {
+  opacity: 1;
+  color: var(--primary-color);
 }
 
 .font-selector-controls {
