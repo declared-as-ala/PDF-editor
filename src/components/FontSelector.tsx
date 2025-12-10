@@ -43,19 +43,9 @@ const FONT_STYLES = [
 ];
 
 export const FontSelector: React.FC<FontSelectorProps> = ({ textItem, onFontChange, onDragStart }) => {
-    if (!textItem) {
-        return (
-            <div className="font-selector">
-                <div className="font-selector-placeholder">
-                    Select text to edit font
-                </div>
-            </div>
-        );
-    }
-
     // Parse current font to get family name
     const getCurrentFontFamily = (): string => {
-        if (!textItem.fontName) return 'Arial';
+        if (!textItem || !textItem.fontName) return 'Arial';
         
         // Extract family name from CSS font-family string
         const fontName = textItem.fontName.split(',')[0].trim();
@@ -72,10 +62,11 @@ export const FontSelector: React.FC<FontSelectorProps> = ({ textItem, onFontChan
     };
 
     const currentFontFamily = getCurrentFontFamily();
-    const currentWeight = textItem.fontWeight || 400;
-    const currentStyle = textItem.fontStyle || 'normal';
+    const currentWeight = textItem?.fontWeight || 400;
+    const currentStyle = textItem?.fontStyle || 'normal';
 
     const handleFontFamilyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        if (!textItem) return;
         const selectedFont = AVAILABLE_FONTS.find(f => f.name === e.target.value);
         if (selectedFont) {
             onFontChange(selectedFont.family, currentWeight, currentStyle);
@@ -83,100 +74,107 @@ export const FontSelector: React.FC<FontSelectorProps> = ({ textItem, onFontChan
     };
 
     const handleWeightChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        if (!textItem) return;
         const weight = parseInt(e.target.value);
-        onFontChange(textItem.fontName, weight, currentStyle);
+        onFontChange(textItem.fontName || 'Arial', weight, currentStyle);
     };
 
     const handleStyleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        if (!textItem) return;
         const style = e.target.value;
-        onFontChange(textItem.fontName, currentWeight, style);
-    };
-
-    const handleHeaderMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-        // Only start dragging if clicking on the header itself, not on child elements like selects
-        const target = e.target as HTMLElement;
-        if (target.closest('select') || target.closest('option') || target.closest('button')) {
-            return; // Don't drag if clicking on interactive elements
-        }
-        e.preventDefault();
-        if (onDragStart) {
-            onDragStart(e);
-        }
+        onFontChange(textItem.fontName || 'Arial', currentWeight, style);
     };
 
     return (
         <div className="font-selector">
-            <div 
-                className="font-selector-header"
-                onMouseDown={handleHeaderMouseDown}
-            >
+            <div className="font-selector-header">
                 <span className="font-selector-title">🎨 Font Style</span>
-                <span className="font-selector-drag-icon" title="Drag to move">⋮⋮</span>
+                <button 
+                    className="font-selector-move-btn"
+                    onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (onDragStart) {
+                            onDragStart(e as any);
+                        }
+                    }}
+                    title="Click and drag to move panel"
+                >
+                    ⛶ Move
+                </button>
             </div>
             
-            <div className="font-selector-controls">
-                <div className="font-control-group">
-                    <label className="font-control-label">Family</label>
-                    <select
-                        className="font-select"
-                        value={currentFontFamily}
-                        onChange={handleFontFamilyChange}
-                    >
-                        {AVAILABLE_FONTS.map(font => (
-                            <option key={font.name} value={font.name}>
-                                {font.name}
-                            </option>
-                        ))}
-                    </select>
+            {!textItem ? (
+                <div className="font-selector-placeholder">
+                    Select text to edit font
                 </div>
+            ) : (
+                <>
+                    <div className="font-selector-controls">
+                        <div className="font-control-group">
+                            <label className="font-control-label">Family</label>
+                            <select
+                                className="font-select"
+                                value={currentFontFamily}
+                                onChange={handleFontFamilyChange}
+                            >
+                                {AVAILABLE_FONTS.map(font => (
+                                    <option key={font.name} value={font.name}>
+                                        {font.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
-                <div className="font-control-group" style={{ display: 'flex', flexDirection: 'row', gap: '0.5rem' }}>
-                    <div style={{ flex: 1 }}>
-                        <label className="font-control-label">Weight</label>
-                        <select
-                            className="font-select"
-                            value={currentWeight}
-                            onChange={handleWeightChange}
-                        >
-                            {FONT_WEIGHTS.map(weight => (
-                                <option key={weight.value} value={weight.value}>
-                                    {weight.label}
-                                </option>
-                            ))}
-                        </select>
+                        <div className="font-control-group" style={{ display: 'flex', flexDirection: 'row', gap: '0.5rem' }}>
+                            <div style={{ flex: 1 }}>
+                                <label className="font-control-label">Weight</label>
+                                <select
+                                    className="font-select"
+                                    value={currentWeight}
+                                    onChange={handleWeightChange}
+                                >
+                                    {FONT_WEIGHTS.map(weight => (
+                                        <option key={weight.value} value={weight.value}>
+                                            {weight.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div style={{ flex: 1 }}>
+                                <label className="font-control-label">Style</label>
+                                <select
+                                    className="font-select"
+                                    value={currentStyle}
+                                    onChange={handleStyleChange}
+                                >
+                                    {FONT_STYLES.map(style => (
+                                        <option key={style.value} value={style.value}>
+                                            {style.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
                     </div>
 
-                    <div style={{ flex: 1 }}>
-                        <label className="font-control-label">Style</label>
-                        <select
-                            className="font-select"
-                            value={currentStyle}
-                            onChange={handleStyleChange}
+                    <div className="font-preview">
+                        <div 
+                            className="font-preview-text"
+                            style={{
+                                fontFamily: textItem.fontName || 'Arial, sans-serif',
+                                fontWeight: currentWeight,
+                                fontStyle: currentStyle,
+                                fontSize: `${Math.min(textItem.fontSize, 16)}px`,
+                                color: textItem.color || '#fff',
+                            }}
                         >
-                            {FONT_STYLES.map(style => (
-                                <option key={style.value} value={style.value}>
-                                    {style.label}
-                                </option>
-                            ))}
-                        </select>
+                            {textItem.text.substring(0, 30) || 'Preview'}...
+                        </div>
                     </div>
-                </div>
-            </div>
-
-            <div className="font-preview">
-                <div 
-                    className="font-preview-text"
-                    style={{
-                        fontFamily: textItem.fontName || 'Arial, sans-serif',
-                        fontWeight: currentWeight,
-                        fontStyle: currentStyle,
-                        fontSize: `${Math.min(textItem.fontSize, 16)}px`,
-                        color: textItem.color || '#fff',
-                    }}
-                >
-                    {textItem.text.substring(0, 30) || 'Preview'}...
-                </div>
-            </div>
+                </>
+            )}
         </div>
     );
 };

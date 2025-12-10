@@ -467,21 +467,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  cursor: grab;
   user-select: none;
-  transition: background-color 0.2s ease;
-}
-
-.font-selector-header:hover {
-  background-color: rgba(99, 102, 241, 0.1);
-  border-radius: 6px;
-  padding: 0.25rem 0.5rem;
-  margin: -0.25rem -0.5rem 0.75rem -0.5rem;
-}
-
-.font-selector-header:active {
-  cursor: grabbing;
-  background-color: rgba(99, 102, 241, 0.2);
 }
 
 .font-selector-title {
@@ -491,18 +477,32 @@ body {
   letter-spacing: 0.5px;
 }
 
-.font-selector-drag-icon {
-  color: var(--text-secondary);
-  font-size: 1.2rem;
-  opacity: 0.6;
-  line-height: 1;
+.font-selector-move-btn {
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  color: var(--text-primary);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
   cursor: grab;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
   user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
-.font-selector-drag-icon:hover {
-  opacity: 1;
-  color: var(--primary-color);
+.font-selector-move-btn:hover {
+  background: rgba(99, 102, 241, 0.3);
+  border-color: rgba(99, 102, 241, 0.6);
+  transform: scale(1.05);
+}
+
+.font-selector-move-btn:active {
+  cursor: grabbing;
+  background: rgba(99, 102, 241, 0.4);
+  transform: scale(0.95);
 }
 
 .font-selector-controls {
