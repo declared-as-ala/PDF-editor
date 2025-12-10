@@ -1,5 +1,3 @@
-import type { TextItem } from '../types/types';
-
 interface HoverBoxProps {
     region: {
         id: string;

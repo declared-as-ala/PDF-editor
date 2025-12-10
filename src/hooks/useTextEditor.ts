@@ -16,7 +16,6 @@ export const useTextEditor = (file: File | null) => {
     });
 
     const [isExtracting, setIsExtracting] = useState(false);
-    const [originalFileBytes, setOriginalFileBytes] = useState<Uint8Array | null>(null);
     const [textOnlyPdf, setTextOnlyPdf] = useState<File | null>(null);
     const [textOnlyPdfBytes, setTextOnlyPdfBytes] = useState<Uint8Array | null>(null);
 
@@ -28,10 +27,6 @@ export const useTextEditor = (file: File | null) => {
 
         setIsExtracting(true);
         try {
-            // Read file as bytes for later export
-            const bytes = await PDFEditor.readFileAsBytes(file);
-            setOriginalFileBytes(bytes);
-
             // Load PDF using pdfjs
             const loadingTask = pdfjs.getDocument(URL.createObjectURL(file));
             const pdfDocument = await loadingTask.promise;
@@ -48,7 +43,8 @@ export const useTextEditor = (file: File | null) => {
             }
 
             // Generate text-only PDF
-            const textOnlyBytes = await PDFEditor.createTextOnlyPDF(textByPage, bytes);
+            const fileBytes = await PDFEditor.readFileAsBytes(file);
+            const textOnlyBytes = await PDFEditor.createTextOnlyPDF(textByPage, fileBytes);
             setTextOnlyPdfBytes(textOnlyBytes);
 
             // Create File object from bytes for react-pdf
@@ -152,10 +148,17 @@ export const useTextEditor = (file: File | null) => {
         }
 
         try {
-            const modifiedPdfBytes = await PDFEditor.applyModifications(
+            // Convert extractedText Map to the format expected by editPDF
+            const textItemsMap = new Map<string, any>();
+            for (const items of editorState.extractedText.values()) {
+                for (const item of items) {
+                    textItemsMap.set(item.id, item);
+                }
+            }
+            
+            const modifiedPdfBytes = await PDFEditor.editPDF(
                 textOnlyPdfBytes,
-                editorState.modifications,
-                editorState.extractedText
+                textItemsMap
             );
 
             const exportFilename = filename || file?.name.replace('.pdf', '_edited.pdf') || 'edited.pdf';

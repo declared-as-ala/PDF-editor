@@ -10,25 +10,34 @@
 
     // Check 1: FontManager imported
     try {
-        const { fontManager } = require('./lib/FontManager');
-        console.log('✅ FontManager imported successfully');
-        console.log(`   Registered fonts: ${fontManager.getAllFonts().length}`);
+        import('./lib/FontManager').then(({ fontManager }) => {
+            console.log('✅ FontManager imported successfully');
+            console.log(`   Registered fonts: ${fontManager.getAllFonts().length}`);
+        }).catch((e) => {
+            console.error('❌ FontManager import failed:', e);
+        });
     } catch (e) {
         console.error('❌ FontManager import failed:', e);
     }
 
     // Check 2: FontFallbackService imported
     try {
-        const { fontFallbackService } = require('./lib/FontFallbackService');
-        console.log('✅ FontFallbackService imported successfully');
+        import('./lib/FontFallbackService').then(() => {
+            console.log('✅ FontFallbackService imported successfully');
+        }).catch((e) => {
+            console.error('❌ FontFallbackService import failed:', e);
+        });
     } catch (e) {
         console.error('❌ FontFallbackService import failed:', e);
     }
 
     // Check 3: fontkit available
     try {
-        const fontkit = require('@pdf-lib/fontkit');
-        console.log('✅ @pdf-lib/fontkit available');
+        import('@pdf-lib/fontkit').then(() => {
+            console.log('✅ @pdf-lib/fontkit available');
+        }).catch((e) => {
+            console.error('❌ @pdf-lib/fontkit not found:', e);
+        });
     } catch (e) {
         console.error('❌ @pdf-lib/fontkit not found:', e);
     }

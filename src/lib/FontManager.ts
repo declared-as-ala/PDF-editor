@@ -6,7 +6,7 @@
  * for both browser (editing) and pdf-lib (export) usage.
  */
 
-import fontkit from '@pdf-lib/fontkit';
+// import fontkit from '@pdf-lib/fontkit'; // Not used in frontend-only version
 
 export interface FontInfo {
     originalName: string;      // e.g., "ABCDEF+CenturySchoolbook-Bold"
@@ -67,7 +67,7 @@ export class FontManager {
             let browserFont: FontFace | undefined;
             try {
                 // Convert Uint8Array to ArrayBuffer for FontFace
-                const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+                const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
                 browserFont = new FontFace(cleanName, arrayBuffer);
                 await browserFont.load();
                 document.fonts.add(browserFont);
@@ -127,7 +127,8 @@ export class FontManager {
 
         // Try finding by family + style + weight
         if (!fontInfo) {
-            fontInfo = this.findBestMatch(fontName, style, weight);
+            const match = this.findBestMatch(fontName, style, weight);
+            fontInfo = match ?? undefined;
         }
 
         // If found, validate it supports the text
@@ -145,7 +146,7 @@ export class FontManager {
             console.warn(`❌ FontManager: No font found for "${fontName}"`);
         }
 
-        return fontInfo;
+        return fontInfo ?? null;
     }
 
     /**
@@ -178,7 +179,7 @@ export class FontManager {
      * NOTE: Disabled full validation because fontkit.create() doesn't work well with subset fonts
      * The old system trusted backend fonts and it worked fine.
      */
-    private async validateFont(bytes: Uint8Array): Promise<ValidationResult> {
+    private async validateFont(_bytes: Uint8Array): Promise<ValidationResult> {
         // Skip validation - trust the backend extraction
         // Subset fonts from PyMuPDF work fine even if fontkit can't parse them
         return {
@@ -242,7 +243,7 @@ export class FontManager {
      * Check if font supports all characters in text
      * NOTE: Disabled because we're not tracking glyph coverage anymore
      */
-    private validateTextSupport(fontInfo: FontInfo, text: string): boolean {
+    private validateTextSupport(_fontInfo: FontInfo, _text: string): boolean {
         // Trust that the font works - skip validation
         return true;
 

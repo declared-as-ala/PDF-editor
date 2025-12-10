@@ -147,7 +147,6 @@ export class FontFallbackService {
     private async tryGoogleFonts(fontName: string): Promise<FontFallbackResult | null> {
         try {
             // Google Fonts uses CSS API
-            const normalized = this.normalizeFontName(fontName);
             const cssUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName)}&display=swap`;
 
             const response = await fetch(cssUrl);
@@ -197,7 +196,7 @@ export class FontFallbackService {
      */
     async getStandardFontFallback(
         fontFamily: string,
-        style: 'normal' | 'italic' = 'normal',
+        _style: 'normal' | 'italic' = 'normal',
         weight: number = 400
     ): Promise<FontFallbackResult | null> {
         console.log(`🔍 FontFallbackService: Getting standard fallback for family "${fontFamily}"`);
